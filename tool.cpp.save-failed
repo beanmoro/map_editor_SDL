@@ -1,0 +1,948 @@
+#include "tool.h"
+
+#include <SDL.h>
+#include <SDL_image.h>
+#include <iostream>
+#include <stdio.h>
+#include <fstream>
+#include <sstream>
+#include <string>
+
+using namespace std;
+
+
+
+namespace patch
+{
+    template < typename T > std::string to_string( const T& n )
+    {
+        std::ostringstream stm ;
+        stm << n ;
+        return stm.str() ;
+    }
+}
+
+TOOL::TOOL(int xMapSize, int yMapSize, SDL_Renderer *ren, int _tFileSize, int _stFileSize, int _acFileSize, int _tFrames){
+    xTiles = xMapSize;
+    yTiles = yMapSize;
+    x = 0;
+    y = 0;
+    sChunk = 32;
+    sTile = 32;
+    fases = 2; // Default Value (Tile and Actions fase)
+    z = _stFileSize;
+    stFileSize = z;
+    tFileSize = _tFileSize;
+    acFileSize = _acFileSize;
+    stFileOptions = 3; // Default Value
+    tFileOptions = 4; // Default Value
+    acFileOptions = 2; //Default Value
+    globalTimer = 0;
+    oldTime = -1;
+
+
+    mButton[0] = false;
+    mButton[1] = false;
+    mButton[2] = false;
+
+    zoom = 0.05;
+
+    selectedZ = 0;
+    onFase = 0;
+
+
+    ldActionIMG("actionicon.png", ren);
+    ldStripIMG("strip.png", ren);
+
+    tileRect[0].x = 0;
+    tileRect[0].y = 0;
+    tileRect[0].w = sTile;
+    tileRect[0].h = sTile;
+
+    actionRect[0].x = 0;
+    actionRect[0].y = 0;
+    actionRect[0].w = sTile;
+    actionRect[0].h = sTile;
+
+
+    tl_newMap();
+    tl_newStageFile();
+    tl_newTileFile();
+    tl_newActionFile();
+
+    //ldTileFrames();
+    uiSel[0].w = sTile*scaleW;
+    uiSel[0].h = sTile*scaleH;
+
+    selRect[0] = 0;
+    selRect[1] = 0;
+    selRect[2] = 0;
+    selRect[3] = 0;
+
+
+
+
+}
+
+void TOOL::tl_keyboard(SDL_Event e){
+
+    if(e.type == SDL_KEYDOWN){
+        switch(e.key.keysym.sym){
+        case SDLK_PLUS:
+            scaleW+=zoom;
+            scaleH+=zoom;
+            break;
+        case SDLK_MINUS:
+            scaleW-=zoom;
+            scaleH-=zoom;
+            break;
+
+        case SDLK_m:
+            rad +=8;
+            break;
+        case SDLK_n:
+            rad -=8;
+            break;
+        }
+
+    }
+
+    if(e.type == SDL_KEYUP){
+        switch(e.key.keysym.sym){
+
+        default:
+            break;
+        }
+    }
+
+
+
+
+    if(e.type == SDL_MOUSEBUTTONDOWN){
+        switch(e.button.button){
+        case SDL_BUTTON_LEFT:
+            mButton[0] = true;
+            break;
+        case SDL_BUTTON_MIDDLE:
+            mButton[1] = true;
+            break;
+        case SDL_BUTTON_RIGHT:
+            mButton[2] = true;
+            break;
+
+        default:
+            break;
+
+
+        }
+
+    }
+
+    if(e.type == SDL_MOUSEBUTTONUP){
+        switch(e.button.button){
+        case SDL_BUTTON_LEFT:
+            mButton[0] = false;
+            break;
+        case SDL_BUTTON_MIDDLE:
+            mButton[1] = false;
+            break;
+        case SDL_BUTTON_RIGHT:
+            mButton[2] = false;
+            break;
+        default:
+            break;
+
+
+        }
+
+    }
+}
+
+void TOOL::tl_step(float _xcam, float _ycam, int _xres, int _yres){
+
+    // sTile/2 = 1 Tile
+
+
+    SDL_GetMouseState(&mouse_x, &mouse_y);
+    mouse_x /= scaleW;
+    mouse_y /= scaleH;
+
+    xCam = _xcam;
+    yCam = _ycam;
+
+
+    if(scaleW < zoom){
+        scaleW = zoom;
+    }
+    if(scaleH < zoom){
+        scaleH = zoom;
+    }
+
+
+    for(int ch = 0; ch < nChunk; ch++){
+
+        if( (mouse_x-xCam > 0 && mouse_y-yCam > 0) && (mouse_x-xCam < xChunk*(sTile*sChunk) && mouse_y-yCam < yChunk*(sTile*sChunk) ) ){
+
+            for(int yy = 0; yy < sChunk; yy++){
+                for(int xx = 0; xx < sChunk; xx++){
+                    /*
+                    if( (cdChunk[ch].x+(xx*sTile) < mouse_x-xCam) && (cdChunk[ch].y+(yy*sTile) < mouse_y-yCam) && (cdChunk[ch].x+(xx*sTile)+sTile > mouse_x-xCam) && (cdChunk[ch].y+(yy*sTile)+sTile > mouse_y-yCam) ){
+
+
+                        if(mButton[0]){
+
+                            Zone[selectedZ][onFase][ch][yy][xx] = 3;
+
+                        }
+
+                    }
+                    */
+
+
+                    if( distPoints(mouse_x-xCam, mouse_y-yCam, cdChunk[ch].x+(xx*sTile)+16, cdChunk[ch].y+(yy*sTile)+16, rad ) && drawOnMap == true && drawRad == true ){
+
+                        if(mButton[0]){
+
+                            Zone[selectedZ][onFase][ch][yy][xx] = 3;
+
+                        }
+                    }
+
+
+                    if(drawRect){
+                        int chSelected[2];
+                        chSelected[0] = 0;
+                        chSelected[1] = 0;
+
+
+                        if(  ( (cdChunk[ch].x+(xx*sTile) < mouse_x-xCam) && (cdChunk[ch].y+(yy*sTile) < mouse_y-yCam) && (cdChunk[ch].x+(xx*sTile)+sTile > mouse_x-xCam) && (cdChunk[ch].y+(yy*sTile)+sTile > mouse_y-yCam) ) && mButton[0] == true && rectBool == false){
+                            selRect[0] = xx;
+                            selRect[1] = yy;
+                            chSelected
+                            rectBool = true;
+
+                            cout << "P1 = ( " << selRect[0] << " , " << selRect[1] << " )" << endl;
+
+                        }
+
+                        if(  ( (cdChunk[ch].x+(xx*sTile) < mouse_x-xCam) && (cdChunk[ch].y+(yy*sTile) < mouse_y-yCam) && (cdChunk[ch].x+(xx*sTile)+sTile > mouse_x-xCam) && (cdChunk[ch].y+(yy*sTile)+sTile > mouse_y-yCam) ) && mButton[0] == false && rectBool == true){
+
+                            selRect[2] = xx;
+                            selRect[3] = yy;
+
+                            rectBool = false;
+                            cout << "P2 = ( " << selRect[2] << " , " << selRect[3] << " )" << endl;
+                            cout << (selRect[3]-selRect[1]) << endl;
+
+                        }
+
+
+                        int onX, onY;
+                        for(int i = 0;  i < (selRect[3]-selRect[1]); i++){
+
+                            if( (selRect[2]-selRect[0]) >= 0){
+
+                                for(int j = 0; j < (selRect[2]-selRect[0]); j++){
+
+
+                                        onX=selRect[0]+j;
+                                        onY=selRect[1]+i;
+                                        Zone[selectedZ][onFase][ch][onY][onX] = 3;
+
+
+                                }
+
+                            }
+                        }
+
+
+
+                    }
+                }
+            }
+        }
+    }
+}
+
+void TOOL::tl_draw(SDL_Renderer* _ren, int _xres, int _yres, float _delta){
+
+
+    for(int ch = 0; ch < nChunk; ch++){
+
+        if( ( ( (cdChunk[ch].x+xCam)*scaleW < _xres+32) && ( (cdChunk[ch].y+yCam)*scaleH < _yres+32) ) || ( ( (cdChunk[ch].x+xCam+cdChunk[ch].w)*scaleW > -32) && ( (cdChunk[ch].y+yCam+cdChunk[ch].h)*scaleH > -32) ) ){
+
+            for(int yy = 0; yy < sChunk; yy++){
+                for(int xx = 0; xx < sChunk; xx++){
+
+                    if( (  ((xx*sTile)+cdChunk[ch].x+xCam)*scaleW < _xres+32) && ( ((yy*sTile)+cdChunk[ch].y+yCam)*scaleH < _yres+32 ) && ( ((xx*sTile)+sTile+cdChunk[ch].x+xCam)*scaleW > -32) && ( ((yy*sTile)+sTile+cdChunk[ch].y+yCam)*scaleH > -32)  ){
+
+
+                            tileRect[1].x = ((xx*sTile)+xCam+cdChunk[ch].x)*scaleW;
+                            tileRect[1].y = ((yy*sTile)+yCam+cdChunk[ch].y)*scaleH;
+                            tileRect[1].w = sTile*scaleW;
+                            tileRect[1].h = sTile*scaleH;
+
+
+                            int tileDetected = Zone[selectedZ][onFase][ch][yy][xx];
+
+                            if(tileFrames[tileDetected][0] > 0){
+
+                                if( animTimer[tileDetected] > tileFrames[tileDetected][0] ){
+                                    animTimer[tileDetected] = 0;
+
+
+                                }
+
+                                if(oldTime < (int)(_delta/ (1000*tileFrames[tileDetected][1]) ) ){
+                                    animTimer[tileDetected]++;
+                                    oldTime = (int)(_delta/ (1000*tileFrames[tileDetected][1]) );
+
+                                }
+
+                                tileRect[0].x = animTimer[tileDetected]*sTile;
+                                tileRect[0].y = tileDetected*sTile;
+
+
+
+                            }else{
+
+                                tileRect[0].x = 0;
+                                tileRect[0].y = tileDetected*sTile;
+
+                            }
+
+
+
+                            SDL_RenderCopy(_ren, stripIMG, &tileRect[0], &tileRect[1]);
+
+
+                            if(showActionMap){
+
+                                if(Zone[selectedZ][1][ch][yy][xx] != 0){
+
+                                    SDL_RenderCopy(_ren, actionIMG, &actionRect[0], &tileRect[1]);
+
+                                }
+
+                            }
+                            if( distPoints(mouse_x-xCam, mouse_y-yCam, cdChunk[ch].x+(xx*sTile)+16, cdChunk[ch].y+(yy*sTile)+16, rad ) && drawOnMap == true && drawRad == true){
+
+                                uiSel[0].x = ((xx*sTile)+cdChunk[ch].x+xCam)*scaleW;
+                                uiSel[0].y = ((yy*sTile)+cdChunk[ch].y+yCam)*scaleH;
+
+                                SDL_SetRenderDrawColor(_ren, 255, 255, 255, 255);
+                                SDL_RenderDrawRect(_ren, &uiSel[0]);
+
+                            }
+
+
+
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
+void TOOL::ldStripIMG(string filename, SDL_Renderer *_ren){
+    /*
+    SDL_Surface* temp;
+    temp = IMG_Load(filename.c_str());
+    stripIMG = SDL_CreateTextureFromSurface(_ren, temp);
+    SDL_FreeSurface(temp);
+    */
+    stripIMG = SDL_CreateTextureFromSurface(_ren, IMG_Load(filename.c_str()));
+
+}
+
+void TOOL::ldActionIMG(string filename, SDL_Renderer *_ren){
+
+    SDL_Surface* temp;
+    temp = IMG_Load(filename.c_str());
+    actionIMG = SDL_CreateTextureFromSurface(_ren, temp);
+    SDL_FreeSurface(temp);
+
+
+}
+
+
+
+void TOOL::tl_newMap(){
+
+    //Consultar dimensiones del mapa;
+
+    crArray();
+    cfChunks();
+
+    for(int zz = 0; zz < stFileSize; zz++){
+        for(int f = 0; f < fases; f++){
+            for(int ch = 0; ch < nChunk; ch++){
+                for(int yt = 0; yt < sChunk; yt++){
+                    for(int xt = 0; xt < sChunk; xt++){
+
+                        Zone[zz][f][ch][yt][xt] = 0;
+
+                    }
+                }
+            }
+        }
+    }
+    cout << "Mapa Creado!" << endl;
+}
+
+void TOOL::tl_saveMap(string filename){
+
+    string fname;
+    for(int r = 0; r < stFileSize; r++){
+            for(int t = 0; t < fases; t++){
+                string n_Stage = patch::to_string(r);
+                string n_Fase = patch::to_string(t);
+                fname = filename+"_"+n_Stage +"_"+n_Fase;
+
+                ofstream mapFile;
+                mapFile.open(fname.c_str(), ios::out);
+
+                if(mapFile.fail()){
+
+                    cout << "ERROR AL GUARDAR EL ARCHIVO MAPA." << endl;
+
+                }else{
+
+                    int aChunk = 0;
+                    // Z, Fases, nChunks, Tiles
+                    for(int yc = 0; yc < yChunk; yc++){
+                        for(int yt = 0; yt < sChunk; yt++){
+                                aChunk = yc*xChunk;
+                            for(int xc = 0; xc < xChunk; xc++){
+                                for(int xt = 0; xt < sChunk; xt++){
+
+                                    mapFile << Zone[r][t][aChunk][yt][xt] << " ";
+
+                                }
+                            aChunk++;
+                            }
+                            mapFile << endl;
+                        }
+                    }
+                }
+        cout << fname << " guardado..." << endl;
+        mapFile.close();
+        }
+    }
+
+    cout << "MAPA GUARDADO!" << endl;
+}
+
+void TOOL::tl_loadMap(string filename){
+
+    string fname;
+    for(int r = 0; r < stFileSize; r++){
+        for(int t = 0; t < fases; t++){
+
+            string n_Stage = patch::to_string(r);
+            string n_Fase = patch::to_string(t);
+            fname = filename+"_"+n_Stage +"_"+n_Fase;
+
+            ifstream mapFile;
+            mapFile.open(fname.c_str(), ios::in);
+
+            if(mapFile.fail()){
+
+                cout << "ERROR AL CARGAR EL ARCHIVO" << endl;
+
+            }else{
+
+                rsArray(fname);
+                crArray();
+                cfChunks();
+
+                int aChunk = 0;
+                for(int yc = 0; yc < yChunk; yc++){
+                    for(int yt = 0; yt < sChunk; yt++){
+                            aChunk = yc*xChunk;
+                        for(int xc = 0; xc < xChunk; xc++){
+                            for(int xt = 0; xt < sChunk; xt++){
+
+                                mapFile >> Zone[r][t][aChunk][yt][xt];
+
+                            }
+                            aChunk++;
+                        }
+                    }
+                }
+            }
+            cout << fname << " cargado..." << endl;
+            mapFile.close();
+        }
+    }
+    cout << "MAPA CARGADO!" << endl;
+}
+
+void TOOL::tl_newStageFile(){
+
+    crSTFile();
+    for(int r = 0; r < stFileSize; r++){
+        //for(int i = 0; i < stFileOptions; i++){
+
+            stFile[r][0] = "Empty_Level_Name";
+            stFile[r][1] = "Empty_Level_Type";
+            stFile[r][2] = "Empty_Author_Name";
+        //}
+    }
+}
+
+
+void TOOL::tl_saveStageFile(string filename){
+
+    ofstream stageFile;
+    filename += "_STAGE_FILE";
+    stageFile.open(filename.c_str(), ios::out);
+
+    if(stageFile.fail()){
+
+        cout << "ERROR AL GUARDAR ARCHIVO DE ETAPAS" << endl;
+
+    }else{
+
+        for(int r = 0; r < stFileSize; r++){
+            for(int i = 0; i < stFileOptions; i++){
+
+                stageFile << stFile[r][i] << " ";
+
+            }
+            stageFile << endl;
+        }
+    }
+
+    stageFile.close();
+}
+
+void TOOL::tl_loadStageFile(string filename){
+
+    ifstream stageFile;
+    filename += "_STAGE_FILE";
+    stageFile.open(filename.c_str(), ios::in);
+
+    if(stageFile.fail()){
+
+        cout << "ERROR AL CARGAR EL ARCHIVO DE ETAPAS" << endl;
+
+    }else{
+        rSTFile(filename);
+        crSTFile();
+        for(int r = 0; r < stFileSize; r++){
+            for(int i = 0; i < stFileOptions; i++){
+
+                stageFile >> stFile[r][i];
+            }
+        }
+    }
+    stageFile.close();
+}
+
+void TOOL::tl_newTileFile(){
+
+    crTFile();
+
+    for(int r = 0; r < tFileSize; r++){
+        //for(int i = 0; i < tFileOptions; i++){
+
+            tFile[r][0]= "Empty_Tile_Name";
+            tFile[r][1]= "empty.png";
+            tFile[r][2]= "0";
+            tFile[r][3] = "1";
+
+        //}
+    }
+}
+
+void TOOL::tl_saveTileFile(string filename){
+
+    ofstream tileFile;
+    filename += "_TILE_FILE";
+    tileFile.open(filename.c_str(), ios::out);
+
+    if(tileFile.fail()){
+
+        cout << "ERROR AL GUARDAR ARCHIVO DE TILES..." << endl;
+
+    }else{
+
+        for(int i = 0; i < tFileSize; i++){
+            for(int r = 0; r < tFileOptions; r++){
+
+                if(r == 2){
+                    tileFile << tileFrames[i][0] << " ";
+                }else if(r== 3) {
+
+                    tileFile << tileFrames[i][1] << " ";
+
+                }else{
+                    tileFile << tFile[i][r] << " ";
+                }
+            }
+            tileFile << endl;
+        }
+    }
+    tileFile.close();
+}
+
+void TOOL::tl_loadTileFile(string filename){
+
+    ifstream tileFile;
+    filename += "_TILE_FILE";
+    tileFile.open(filename.c_str(), ios::in);
+
+    if(tileFile.fail()){
+
+
+        cout << "ERROR AL CARGAR ARCHIVO DE TILES..." << endl;
+
+    }else{
+        rTFile(filename);
+        crTFile();
+
+        for(int i = 0; i < tFileSize; i++){
+
+            for(int r = 0; r < tFileOptions; r++){
+
+                if(r == 2){
+
+                    tileFile >> tileFrames[i][0];
+
+
+
+                }else if(r == 3){
+
+                    tileFile >> tileFrames[i][1];
+
+
+                }else{
+
+                    tileFile >> tFile[i][r];
+
+                }
+
+
+            }
+        }
+    }
+    tileFile.close();
+}
+
+void TOOL::tl_newActionFile(){
+
+    crACFile();
+    for(int i = 0; i < acFileSize; i++){
+        for(int j = 0; j < acFileOptions; j++){
+
+            acFile[i][0] = "Empty_Action";
+            acFile[i][1] = "Empty_Type";
+
+        }
+    }
+}
+
+void TOOL::tl_saveActionFile(string filename){
+
+    ofstream actionFile;
+    filename += "_ACTION_FILE";
+    actionFile.open(filename.c_str(), ios::out);
+
+    if(actionFile.fail()){
+
+        cout << "ERROR AL GUARDAR EL ARCHIVO DE ACCIONES..." << endl;
+
+    }else{
+
+        for(int i = 0; i < acFileSize; i++){
+            for(int j = 0; j < acFileOptions; j++){
+
+                actionFile << acFile[i][j] << " ";
+
+            }
+            actionFile << endl;
+        }
+    }
+    actionFile.close();
+}
+
+void TOOL::tl_loadActionFile(string filename){
+
+    ifstream actionFile;
+    filename += "_ACTION_FILE";
+    actionFile.open(filename.c_str(), ios::in);
+
+    if(actionFile.fail()){
+
+
+        cout << "ERROR AL CARGAR EL ARCHIVO DE ACCIONES..." << endl;
+    }else{
+
+        rACFile(filename);
+        crACFile();
+        for(int i = 0; i < acFileSize; i++){
+            for(int j = 0; j < acFileOptions; j++){
+
+                actionFile >> acFile[i][j];
+            }
+        }
+
+    }
+    actionFile.close();
+}
+
+
+void TOOL::rsArray(string filename){
+
+    string line;
+    int u;
+    ifstream mapFile;
+    mapFile.open(filename.c_str(), ios::in);
+    int xcounter = 0;
+    int ycounter = 0;
+
+    if(mapFile.fail()){
+
+        cout << "ERROR AL RECONFIGURAR EL ARREGLO!" << endl;
+
+    } else {
+
+        while(getline(mapFile, line)){
+            istringstream _stream(line);
+            xcounter = 0;
+            while(_stream >> u){
+                xcounter++;
+            }
+            ycounter++;
+        }
+
+        xTiles = xcounter;
+        yTiles = ycounter;
+
+    }
+
+    mapFile.close();
+}
+
+void TOOL::rSTFile(string filename){
+
+    string line;
+    string u;
+    ifstream stageFile;
+    stageFile.open(filename.c_str(), ios::in);
+    int y_size = 0;
+    int x_size = 0;
+
+    if(stageFile.fail()){
+
+        cout << "ERROR AL TRATAR DE ENCONTRAR ARCHIVO DE ETAPAS..." << endl;
+
+    } else {
+        while(getline(stageFile, line)){
+            istringstream _stream(line);
+            x_size = 0;
+            while(_stream >> u){
+                x_size++;
+            }
+            y_size++;
+        }
+
+        stFileSize = y_size;
+        stFileOptions = x_size;
+    }
+
+}
+
+void TOOL::crSTFile(){
+
+    stFile = new string*[stFileSize];
+    for(int i = 0; i < stFileSize; i++){
+        stFile[i] = new string[stFileOptions];
+    }
+
+}
+
+void TOOL::rTFile(string filename){
+
+    string line;
+    string u;
+    ifstream tileFile;
+    tileFile.open(filename.c_str(), ios::in);
+    int x_size = 0;
+    int y_size = 0;
+
+    if(tileFile.fail()){
+
+
+        cout << "ERROR AL CARGAR EL ARCHIVO" << endl;
+
+    }else{
+        while(getline(tileFile, line)){
+            istringstream _stream(line);
+            x_size = 0;
+            while(_stream >> u){
+                x_size++;
+
+            }
+
+            y_size++;
+        }
+
+        tFileSize = y_size;
+        tFileOptions = x_size;
+    }
+    tileFile.close();
+}
+
+void TOOL::crTFile(){
+
+    tFile = new string*[tFileSize];
+    tileFrames = new float*[tFileSize];
+    animTimer = new int[tFileSize];
+    for(int i = 0; i < tFileSize; i++){
+        tFile[i] = new string[tFileOptions];
+        tileFrames[i] = new float [2];
+        animTimer[i] = 0;
+        tileFrames[i][0] = 0;
+        tileFrames[i][1] = 1;
+
+
+    }
+
+
+}
+
+void TOOL::crACFile(){
+
+    acFile = new string*[acFileSize];
+    for(int i = 0; i < acFileSize; i++){
+        acFile[i] = new string[acFileOptions];
+    }
+}
+
+void TOOL::rACFile(string filename){
+
+    string line;
+    string u;
+    ifstream actionFile;
+    actionFile.open(filename.c_str(), ios::in);
+    int x_size = 0;
+    int y_size = 0;
+
+    if(actionFile.fail()){
+
+        cout << "ERROR AL CARGAR EL ARCHIVO DE ACCIONES EN EL PROCESO DE REESCALADO... " << endl;
+
+    }else{
+
+        while(getline(actionFile, line)){
+            istringstream _stream(line);
+            x_size = 0;
+            while(_stream >> u){
+                x_size++;
+            }
+            y_size++;
+        }
+
+        acFileSize = y_size;
+        acFileOptions = x_size;
+
+    }
+    actionFile.close();
+}
+
+void TOOL::crArray(){
+
+    acChunks();
+    if( (z != oldZ) || (fases != oldFases) || (nChunk != oldNChunk) || (sChunk != oldSChunk) ){
+        Zone = new int****[z];
+        for(int i = 0; i < z; i++){
+            Zone[i] = new int***[fases];
+            for(int j = 0; j < fases; j++){
+                Zone[i][j] = new int**[nChunk];
+                for(int h = 0; h < nChunk; h++){
+                    Zone[i][j][h] = new int *[sChunk];
+                    for(int k = 0; k < sChunk; k++){
+                        Zone[i][j][h][k] = new int[sChunk];
+
+                    }
+                }
+            }
+        }
+        oldZ = z;
+        oldFases = fases;
+        oldNChunk = nChunk;
+        oldSChunk = sChunk;
+
+    }else{
+
+        cout << "Recrear el arreglo del mapa no fue necesario!" << endl;
+
+    }
+
+
+}
+
+
+
+void TOOL::cfChunks(){
+
+    cdChunk = new SDL_Rect[nChunk];
+    int t_var = 0;
+    int preSize = sTile * sChunk;
+
+    for(int i = 0; i < yChunk; i++){
+        t_var = i * xChunk;
+        for(int j = 0; j < xChunk; j++){
+            cdChunk[t_var].x = preSize*j;
+            cdChunk[t_var].y = preSize*i;
+            cdChunk[t_var].w = preSize;
+            cdChunk[t_var].h = preSize;
+
+            t_var++;
+        }
+    }
+}
+
+void TOOL::acChunks(){
+
+    xChunk = xTiles/sChunk;
+    yChunk = yTiles/sChunk;
+    nChunk = xChunk*yChunk;
+}
+
+
+void TOOL::printMapConsole(){
+
+    int aChunk = 0;
+
+    for(int yc = 0; yc < yChunk; yc++){
+        for(int yt = 0; yt < sChunk; yt++){
+            aChunk = yc*xChunk;
+            for(int xc = 0; xc < xChunk; xc++){
+                for(int xt = 0; xt < sChunk; xt++){
+
+                        cout << Zone[selectedZ][onFase][aChunk][yt][xt] << " ";
+                }
+                aChunk++;
+            }
+            cout << endl;
+        }
+    }
+
+
+
+}
+
+
+bool TOOL::distPoints(int x1, int y1, int x2, int y2, int r){
+
+
+
+    return ((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)) < r*r;
+
+}
+

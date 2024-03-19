@@ -1,0 +1,121 @@
+# depslib dependency file v1.0
+1445557747 source:c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\editor.cpp
+	"editor.h"
+	<SDL.h>
+	<SDL_image.h>
+	<iostream>
+	"tool.h"
+
+1441661198 c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\editor.h
+	<SDL.h>
+	<SDL_image.h>
+	"tool.h"
+
+1441661129 source:c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\main.cpp
+	<iostream>
+	"editor.h"
+
+1448407366 source:c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\tool.cpp
+	"tool.h"
+	<SDL.h>
+	<SDL_image.h>
+	<iostream>
+	<stdio.h>
+	<fstream>
+	<sstream>
+	<string>
+	"interface.h"
+
+1447886680 c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\tool.h
+	<SDL.h>
+	<SDL_image.h>
+	<SDL_ttf.h>
+	<iostream>
+	<stdio.h>
+	<fstream>
+	<sstream>
+	"interface.h"
+
+1444172664 source:c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\methods.cpp
+	"methods.h"
+	<SDL.h>
+	<SDL_ttf.h>
+	<iostream>
+
+1444172645 c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\methods.h
+	<iostream>
+	<SDL.h>
+	<SDL_ttf.h>
+
+1444342477 c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\interface.h
+	<SDL.h>
+	<SDL_ttf.h>
+	<iostream>
+
+1445479299 source:c:\users\benjamin\dropbox\proyecto\2d_editor\2d_editor\interface.cpp
+	"interface.h"
+	<SDL_image.h>
+	<SDL.h>
+	<SDL_ttf.h>
+	<iostream>
+
+1466459305 source:c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\editor.cpp
+	"editor.h"
+	<SDL2/SDL.h>
+	<SDL2/SDL_image.h>
+	<iostream>
+	"tool.h"
+
+1466459290 c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\editor.h
+	<SDL2/SDL.h>
+	<SDL2/SDL_image.h>
+	"tool.h"
+
+1466459296 c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\tool.h
+	<SDL2/SDL.h>
+	<SDL2/SDL_image.h>
+	<SDL2/SDL_ttf.h>
+	<iostream>
+	<stdio.h>
+	<fstream>
+	<sstream>
+	"interface.h"
+
+1466459300 c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\interface.h
+	<SDL2/SDL.h>
+	<SDL2/SDL_ttf.h>
+	<iostream>
+
+1466459320 source:c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\interface.cpp
+	"interface.h"
+	<SDL2/SDL_image.h>
+	<SDL2/SDL.h>
+	<SDL2/SDL_ttf.h>
+	<iostream>
+
+1441657529 source:c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\main.cpp
+	<iostream>
+	"editor.h"
+
+1444169064 source:c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\methods.cpp
+	"methods.h"
+	<SDL.h>
+	<SDL_ttf.h>
+	<iostream>
+
+1444169045 c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\methods.h
+	<iostream>
+	<SDL.h>
+	<SDL_ttf.h>
+
+1466459326 source:c:\users\benjamin\dropbox\projects\proyecto\2d_editor\2d_editor\tool.cpp
+	"tool.h"
+	<SDL2/SDL.h>
+	<SDL2/SDL_image.h>
+	<iostream>
+	<stdio.h>
+	<fstream>
+	<sstream>
+	<string>
+	"interface.h"
+
